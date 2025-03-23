@@ -35,8 +35,6 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/sglang-workspace"
 
-
-COPY src /src
 COPY .runpod /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
@@ -47,4 +45,4 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     fi
 
 # Start the handler
-CMD ["python3", "/.runpod/handler.py"]
+CMD ["python3", "/src/handler.py"]

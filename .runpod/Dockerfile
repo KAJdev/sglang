@@ -37,7 +37,7 @@ ENV PYTHONPATH="/:/sglang-workspace"
 
 
 COPY src /src
-COPY .runpod /.runpod
+COPY .runpod /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
         export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \

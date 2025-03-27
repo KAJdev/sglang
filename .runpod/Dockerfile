@@ -6,7 +6,7 @@ RUN apt-get update -y \
 RUN ldconfig /usr/local/cuda-12.1/compat/
 
 # Install Python dependencies
-COPY builder/requirements.txt /requirements.txt
+COPY .runpod /
 RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade -r /requirements.txt
@@ -35,14 +35,13 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/sglang-workspace"
 
-COPY .runpod /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -f /run/secrets/HF_TOKEN ]; then \
         export HF_TOKEN=$(cat /run/secrets/HF_TOKEN); \
     fi && \
     if [ -n "$MODEL_NAME" ]; then \
-        python3 /src/download_model.py; \
+        python3 /download_model.py; \
     fi
 
 # Start the handler
-CMD ["python3", "/src/handler.py"]
+CMD ["python3", "/handler.py"]

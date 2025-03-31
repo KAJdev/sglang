@@ -9,13 +9,23 @@
     "containerDiskInGb": 100,
     "env": [
       {
+        "key": "MODEL_NAME",
+        "input": {
+          "name": "Model Name",
+          "type": "huggingface",
+          "description": "Hugging Face model name or path to load",
+          "required": true
+        }
+      },
+      {
         "key": "HOST",
         "input": {
           "name": "Host",
           "type": "string",
           "description": "Host of the server",
           "default": "0.0.0.0",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -25,7 +35,8 @@
           "type": "number",
           "description": "Port of the server",
           "default": 30000,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -35,7 +46,8 @@
           "type": "string",
           "description": "Path of the tokenizer",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -45,7 +57,8 @@
           "type": "string",
           "description": "Additional ports for the server",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -59,7 +72,8 @@
           "options": [
             { "value": "auto", "label": "auto" },
             { "value": "slow", "label": "slow" }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -76,7 +90,8 @@
             { "value": "safetensors", "label": "safetensors" },
             { "value": "npcache", "label": "npcache" },
             { "value": "dummy", "label": "dummy" }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -94,7 +109,8 @@
             { "value": "bfloat16", "label": "bfloat16" },
             { "value": "float", "label": "float" },
             { "value": "float32", "label": "float32" }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -104,7 +120,8 @@
           "type": "number",
           "description": "Model's maximum context length",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -124,7 +141,8 @@
             { "value": "awq_marlin", "label": "AWQ Marlin" },
             { "value": "squeezellm", "label": "SqueezeLLM" },
             { "value": "bitsandbytes", "label": "BitsAndBytes" }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -134,7 +152,8 @@
           "type": "string",
           "description": "Override model name in API",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -144,7 +163,8 @@
           "type": "string",
           "description": "Chat template name or path",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -154,7 +174,8 @@
           "type": "number",
           "description": "Fraction of memory for static allocation",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -164,7 +185,8 @@
           "type": "number",
           "description": "Maximum number of running requests",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -174,7 +196,8 @@
           "type": "number",
           "description": "Maximum requests in memory pool",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -184,7 +207,8 @@
           "type": "number",
           "description": "Maximum tokens in memory pool",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -194,7 +218,8 @@
           "type": "number",
           "description": "Max tokens in chunk for chunked prefill",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -204,7 +229,8 @@
           "type": "number",
           "description": "Max tokens in prefill batch",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -220,7 +246,8 @@
             { "value": "random", "label": "Random" },
             { "value": "fcfs", "label": "FCFS" },
             { "value": "dfs-weight", "label": "DFS Weight" }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -230,7 +257,8 @@
           "type": "number",
           "description": "Conservativeness of schedule policy",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -240,7 +268,8 @@
           "type": "number",
           "description": "Tensor parallelism size",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -250,7 +279,8 @@
           "type": "number",
           "description": "Streaming interval in token length",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -260,7 +290,8 @@
           "type": "number",
           "description": "Random seed",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -270,7 +301,8 @@
           "type": "string",
           "description": "Logging level for all loggers",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -280,7 +312,8 @@
           "type": "string",
           "description": "Logging level for HTTP server",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -290,7 +323,8 @@
           "type": "string",
           "description": "API key for the server",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -300,7 +334,8 @@
           "type": "number",
           "description": "Max concurrent requests per worker. SGLang has an internal queue, so you don't have to worry about limiting by VRAM, this is for improving scaling/load balancing efficiency",
           "default": 300,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -310,7 +345,8 @@
           "type": "string",
           "description": "Path of file storage in backend",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -320,7 +356,8 @@
           "type": "number",
           "description": "Data parallelism size",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -334,7 +371,8 @@
           "options": [
             { "value": "round_robin", "label": "Round Robin" },
             { "value": "shortest_queue", "label": "Shortest Queue" }
-          ]
+          ],
+          "advanced": true
         }
       },
       {
@@ -344,7 +382,8 @@
           "type": "string",
           "description": "NCCL init address for multi-node",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -354,7 +393,8 @@
           "type": "number",
           "description": "Number of nodes",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -364,7 +404,8 @@
           "type": "number",
           "description": "Node rank",
           "default": "",
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -374,7 +415,8 @@
           "type": "boolean",
           "description": "Skip tokenizer init",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -384,7 +426,8 @@
           "type": "boolean",
           "description": "Allow custom models from Hub",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -394,7 +437,8 @@
           "type": "boolean",
           "description": "Log inputs and outputs of requests",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -404,7 +448,8 @@
           "type": "boolean",
           "description": "Show time cost of custom marks",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -414,7 +459,8 @@
           "type": "boolean",
           "description": "Disable flashinfer attention kernels",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -424,7 +470,8 @@
           "type": "boolean",
           "description": "Disable flashinfer sampling kernels",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -434,7 +481,8 @@
           "type": "boolean",
           "description": "Disable RadixAttention for prefix caching",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -444,7 +492,8 @@
           "type": "boolean",
           "description": "Disable regex jump-forward",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -454,7 +503,8 @@
           "type": "boolean",
           "description": "Disable cuda graph",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -464,7 +514,8 @@
           "type": "boolean",
           "description": "Disable disk cache",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -474,7 +525,8 @@
           "type": "boolean",
           "description": "Optimize model with torch.compile",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -484,7 +536,8 @@
           "type": "boolean",
           "description": "Enable P2P check for GPU access",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -494,7 +547,8 @@
           "type": "boolean",
           "description": "Enable Multi-head Latent Attention",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -504,7 +558,8 @@
           "type": "boolean",
           "description": "Cast attention results to fp32",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       },
       {
@@ -514,7 +569,8 @@
           "type": "boolean",
           "description": "Enable memory efficient weight loading",
           "default": false,
-          "required": false
+          "required": false,
+          "advanced": true
         }
       }
     ]

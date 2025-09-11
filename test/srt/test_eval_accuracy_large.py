@@ -3,6 +3,8 @@ Usage:
 python -m unittest test_eval_accuracy_large.TestEvalAccuracyLarge.test_mmlu
 """
 
+import os
+import time
 import unittest
 from types import SimpleNamespace
 
@@ -12,13 +14,14 @@ from sglang.test.test_utils import (
     DEFAULT_MODEL_NAME_FOR_TEST,
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     DEFAULT_URL_FOR_TEST,
+    CustomTestCase,
     is_in_ci,
     popen_launch_server,
     write_github_step_summary,
 )
 
 
-class TestEvalAccuracyLarge(unittest.TestCase):
+class TestEvalAccuracyLarge(CustomTestCase):
     @classmethod
     def setUpClass(cls):
         cls.model = DEFAULT_MODEL_NAME_FOR_TEST

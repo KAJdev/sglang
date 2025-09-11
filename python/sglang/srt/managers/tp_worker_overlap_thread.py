@@ -12,13 +12,14 @@
 # limitations under the License.
 # ==============================================================================
 """A tensor parallel worker."""
+from __future__ import annotations
 
 import dataclasses
 import logging
 import signal
 import threading
 from queue import Queue
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import psutil
 import torch
@@ -26,6 +27,8 @@ import torch
 from sglang.srt.managers.io_struct import (
     GetWeightsByNameReqInput,
     InitWeightsUpdateGroupReqInput,
+    LoadLoRAAdapterReqInput,
+    UnloadLoRAAdapterReqInput,
     UpdateWeightFromDiskReqInput,
     UpdateWeightsFromDistributedReqInput,
     UpdateWeightsFromTensorReqInput,
@@ -35,6 +38,9 @@ from sglang.srt.managers.tp_worker import TpModelWorker
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils import DynamicGradMode, get_compiler_backend
 from sglang.utils import get_exception_traceback
+
+if TYPE_CHECKING:
+    from sglang.srt.managers.cache_controller import LayerDoneCounter
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +62,15 @@ class TpModelWorkerClient:
         server_args: ServerArgs,
         gpu_id: int,
         tp_rank: int,
+        moe_ep_rank: int,
+        pp_rank: int,
         dp_rank: Optional[int],
         nccl_port: int,
     ):
         # Load the model
-        self.worker = TpModelWorker(server_args, gpu_id, tp_rank, dp_rank, nccl_port)
+        self.worker = TpModelWorker(
+            server_args, gpu_id, tp_rank, moe_ep_rank, pp_rank, dp_rank, nccl_port
+        )
         self.max_running_requests = self.worker.max_running_requests
         self.device = self.worker.device
         self.gpu_id = gpu_id
@@ -73,7 +83,7 @@ class TpModelWorkerClient:
         )
 
         # Launch threads
-        self.input_queue = Queue()
+        self.input_queue = Queue[Tuple[ModelWorkerBatch, int, torch.Event]]()
         self.output_queue = Queue()
         self.forward_stream = torch.get_device_module(self.device).Stream()
         self.forward_thread = threading.Thread(
@@ -85,14 +95,33 @@ class TpModelWorkerClient:
         if self.device == "cpu":
             self.scheduler_stream.synchronize = lambda: None  # No-op for CPU
 
+        self.hicache_layer_transfer_counter = None
+
+    def register_hicache_layer_transfer_counter(self, counter: LayerDoneCounter):
+        self.hicache_layer_transfer_counter = counter
+
     def get_worker_info(self):
         return self.worker.get_worker_info()
+
+    def get_tokens_per_layer_info(self):
+        return self.worker.get_tokens_per_layer_info()
+
+    @property
+    def sliding_window_size(self) -> Optional[int]:
+        return self.worker.sliding_window_size
+
+    @property
+    def is_hybrid(self) -> bool:
+        return self.worker.is_hybrid
 
     def get_pad_input_ids_func(self):
         return self.worker.get_pad_input_ids_func()
 
-    def get_tp_cpu_group(self):
-        return self.worker.get_tp_cpu_group()
+    def get_tp_group(self):
+        return self.worker.get_tp_group()
+
+    def get_attention_tp_group(self):
+        return self.worker.get_attention_tp_group()
 
     def get_attention_tp_cpu_group(self):
         return self.worker.get_attention_tp_cpu_group()
@@ -118,12 +147,14 @@ class TpModelWorkerClient:
     @DynamicGradMode()
     def forward_thread_func_(self):
         batch_pt = 0
-        batch_lists = [None] * 2
+        batch_lists: List = [None] * 2
 
         while True:
-            model_worker_batch, future_token_ids_ct = self.input_queue.get()
+            model_worker_batch, future_token_ids_ct, sync_event = self.input_queue.get()
             if not model_worker_batch:
                 break
+
+            sync_event.wait()
 
             # Keep a reference of model_worker_batch by storing it into a list.
             # Otherwise, the tensor members of model_worker_batch will be released
@@ -132,7 +163,6 @@ class TpModelWorkerClient:
             batch_pt += 1
 
             # Create event
-            self.launch_done = threading.Event()
             copy_done = torch.get_device_module(self.device).Event()
 
             # Resolve future tokens in the input
@@ -140,8 +170,10 @@ class TpModelWorkerClient:
             resolve_future_token_ids(input_ids, self.future_token_ids_map)
 
             # Run forward
-            logits_output, next_token_ids = self.worker.forward_batch_generation(
-                model_worker_batch, self.launch_done
+            logits_output, next_token_ids, can_run_cuda_graph = (
+                self.worker.forward_batch_generation(
+                    model_worker_batch, model_worker_batch.launch_done
+                )
             )
 
             # Update the future token ids map
@@ -166,12 +198,22 @@ class TpModelWorkerClient:
             next_token_ids = next_token_ids.to("cpu", non_blocking=True)
             copy_done.record()
 
-            self.output_queue.put((copy_done, logits_output, next_token_ids))
+            self.output_queue.put(
+                (copy_done, logits_output, next_token_ids, can_run_cuda_graph)
+            )
 
-    def resolve_batch_result(self, bid: int):
-        copy_done, logits_output, next_token_ids = self.output_queue.get()
+    def resolve_last_batch_result(self, launch_done: Optional[threading.Event] = None):
+        """
+        This function is called to resolve the last batch result and
+        wait for the current batch to be launched. Used in overlap mode.
+        """
+        copy_done, logits_output, next_token_ids, can_run_cuda_graph = (
+            self.output_queue.get()
+        )
+
+        if launch_done is not None:
+            launch_done.wait()
         copy_done.synchronize()
-        self.launch_done.wait()
 
         if logits_output.next_token_logprobs is not None:
             logits_output.next_token_logprobs = (
@@ -182,9 +224,11 @@ class TpModelWorkerClient:
                     logits_output.input_token_logprobs.tolist()
                 )
         next_token_ids = next_token_ids.tolist()
-        return logits_output, next_token_ids
+        return logits_output, next_token_ids, can_run_cuda_graph
 
-    def forward_batch_generation(self, model_worker_batch: ModelWorkerBatch):
+    def forward_batch_generation(
+        self, model_worker_batch: ModelWorkerBatch
+    ) -> Tuple[None, torch.Tensor, bool]:
         # Create a new copy of sampling_info because it will be updated in-place by the scheduler for the next batch.
         sampling_info = model_worker_batch.sampling_info
         sampling_info.update_penalties()
@@ -195,10 +239,11 @@ class TpModelWorkerClient:
         )
 
         # A cuda stream sync here to avoid the cuda illegal memory access error.
-        self.scheduler_stream.synchronize()
+        sync_event = torch.get_device_module(self.device).Event()
+        sync_event.record(self.scheduler_stream)
 
         # Push a new batch to the queue
-        self.input_queue.put((model_worker_batch, self.future_token_ids_ct))
+        self.input_queue.put((model_worker_batch, self.future_token_ids_ct, sync_event))
 
         # Allocate output future objects
         bs = len(model_worker_batch.seq_lens)
@@ -212,7 +257,7 @@ class TpModelWorkerClient:
         self.future_token_ids_ct = (
             self.future_token_ids_ct + bs
         ) % self.future_token_ids_limit
-        return None, future_next_token_ids
+        return None, future_next_token_ids, False
 
     def update_weights_from_disk(self, recv_req: UpdateWeightFromDiskReqInput):
         success, message = self.worker.update_weights_from_disk(recv_req)
@@ -234,6 +279,15 @@ class TpModelWorkerClient:
 
     def get_weights_by_name(self, recv_req: GetWeightsByNameReqInput):
         return self.worker.get_weights_by_name(recv_req)
+
+    def load_lora_adapter(self, recv_req: LoadLoRAAdapterReqInput):
+        return self.worker.load_lora_adapter(recv_req)
+
+    def unload_lora_adapter(self, recv_req: UnloadLoRAAdapterReqInput):
+        return self.worker.unload_lora_adapter(recv_req)
+
+    def can_run_lora_batch(self, lora_ids: list[str]) -> bool:
+        return self.worker.can_run_lora_batch(lora_ids)
 
     def __delete__(self):
         self.input_queue.put((None, None))

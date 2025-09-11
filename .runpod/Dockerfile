@@ -1,4 +1,4 @@
-FROM 13.0.1-cudnn-devel-ubuntu24.04
+FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu22.04
 
 RUN apt-get update -y \
     && apt-get install -y python3-pip
